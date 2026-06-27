@@ -9,8 +9,8 @@ RUN bun install --frozen-lockfile
 # Copy source code dan env
 COPY . .
 
-# Expose port (biasanya environment di cloud pakai port 3000)
-EXPOSE 3000
+# Expose port (Hugging Face Spaces default is 7860)
+EXPOSE 7860
 
 # Jalankan server
 CMD ["bun", "run", "start"]
