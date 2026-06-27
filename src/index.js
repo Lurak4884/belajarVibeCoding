@@ -7,10 +7,12 @@ const checkAuth = ({ headers, set }) => {
   const authHeader = headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Basic ')) {
     set.status = 401;
-    return {
+    const errRes = {
       status: "Not OK",
       message: "Unauthorized: Missing basic auth header"
     };
+    console.log(`[${new Date().toISOString()}] AUTH - Failed: Missing auth header`);
+    return errRes;
   }
 
   const base64Credentials = authHeader.substring(6);
@@ -22,10 +24,12 @@ const checkAuth = ({ headers, set }) => {
 
   if (clientId !== expectedClientId || clientKey !== expectedClientKey) {
     set.status = 401;
-    return {
+    const errRes = {
       status: "Not OK",
       message: "Unauthorized: Invalid credentials"
     };
+    console.log(`[${new Date().toISOString()}] AUTH - Failed: Invalid credentials for clientId: ${clientId}`);
+    return errRes;
   }
 };
 
@@ -36,16 +40,20 @@ const app = new Elysia()
       .onBeforeHandle(checkAuth)
       .post('/', async ({ body, set }) => {
         try {
+          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Request Received`);
+          console.log(`Request Body: ${JSON.stringify(body, null, 2)}`);
+
           if (!body || !body.transactionId || !body.msisdn) {
             set.status = 400;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "transactionId and msisdn are required"
             };
+            console.log(`Response (400): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           const { transactionId, msisdn, productName } = body;
-          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           // Check duplicate
           const existing = await db
@@ -60,10 +68,12 @@ const app = new Elysia()
 
           if (existing.length > 0) {
             set.status = 409;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "Subscription with this transactionId or msisdn already exists"
             };
+            console.log(`Response (409): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           // Generate referenceId (UUID)
@@ -77,7 +87,7 @@ const app = new Elysia()
             productName: productName || null,
             subscriptionStatus: 'pending',
           });
-          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Stored pending subscription. referenceId: ${referenceId}`);
+          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Database status set to PENDING`);
 
           // Set up callback delay values
           const delayInactive = parseInt(process.env.CALLBACK_DELAY_INACTIVE || '2000', 10);
@@ -87,7 +97,7 @@ const app = new Elysia()
           // Trigger background job (callback lifecycle)
           setTimeout(async () => {
             try {
-              console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to INACTIVE for partnerSubscriptionId: ${transactionId}`);
+              console.log(`[${new Date().toISOString()}] CALLBACK - Updating status to INACTIVE for partnerSubscriptionId: ${transactionId}`);
               // Update status to inactive
               await db
                 .update(subscriptions)
@@ -96,27 +106,33 @@ const app = new Elysia()
 
               // Send callback first
               if (callbackUrl) {
+                const callbackPayload = {
+                  partnerSubscriptionId: transactionId,
+                  referenceId,
+                  msisdn,
+                  productName: productName || null,
+                  subscriptionStatus: 'inactive',
+                  timestamp: new Date().toISOString(),
+                };
                 console.log(`[${new Date().toISOString()}] CALLBACK - Sending INACTIVE callback to ${callbackUrl}`);
+                console.log(`Callback Payload: ${JSON.stringify(callbackPayload, null, 2)}`);
+
                 await fetch(callbackUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    partnerSubscriptionId: transactionId,
-                    referenceId,
-                    msisdn,
-                    productName: productName || null,
-                    subscriptionStatus: 'inactive',
-                    timestamp: new Date().toISOString(),
-                  }),
+                  body: JSON.stringify(callbackPayload),
                 })
-                  .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - INACTIVE callback sent successfully`))
+                  .then(async (res) => {
+                    const text = await res.text();
+                    console.log(`[${new Date().toISOString()}] CALLBACK - INACTIVE callback response status: ${res.status}. Body: ${text}`);
+                  })
                   .catch((err) => console.error(`[${new Date().toISOString()}] CALLBACK - INACTIVE callback failed:`, err.message));
               }
 
               // Trigger callback active after delayActive
               setTimeout(async () => {
                 try {
-                  console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to ACTIVE for partnerSubscriptionId: ${transactionId}`);
+                  console.log(`[${new Date().toISOString()}] CALLBACK - Updating status to ACTIVE for partnerSubscriptionId: ${transactionId}`);
                   // Update status to active
                   await db
                     .update(subscriptions)
@@ -125,20 +141,26 @@ const app = new Elysia()
 
                   // Send callback second
                   if (callbackUrl) {
+                    const callbackPayload = {
+                      partnerSubscriptionId: transactionId,
+                      referenceId,
+                      msisdn,
+                      productName: productName || null,
+                      subscriptionStatus: 'active',
+                      timestamp: new Date().toISOString(),
+                    };
                     console.log(`[${new Date().toISOString()}] CALLBACK - Sending ACTIVE callback to ${callbackUrl}`);
+                    console.log(`Callback Payload: ${JSON.stringify(callbackPayload, null, 2)}`);
+
                     await fetch(callbackUrl, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        partnerSubscriptionId: transactionId,
-                        referenceId,
-                        msisdn,
-                        productName: productName || null,
-                        subscriptionStatus: 'active',
-                        timestamp: new Date().toISOString(),
-                      }),
+                      body: JSON.stringify(callbackPayload),
                     })
-                      .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - ACTIVE callback sent successfully`))
+                      .then(async (res) => {
+                        const text = await res.text();
+                        console.log(`[${new Date().toISOString()}] CALLBACK - ACTIVE callback response status: ${res.status}. Body: ${text}`);
+                      })
                       .catch((err) => console.error(`[${new Date().toISOString()}] CALLBACK - ACTIVE callback failed:`, err.message));
                   }
                 } catch (err) {
@@ -152,7 +174,7 @@ const app = new Elysia()
           }, delayInactive);
 
           set.status = 201;
-          return {
+          const successRes = {
             status: "OK",
             message: "Subscription created successfully",
             data: {
@@ -161,27 +183,35 @@ const app = new Elysia()
               msisdn
             }
           };
+          console.log(`Response (201): ${JSON.stringify(successRes, null, 2)}`);
+          return successRes;
 
         } catch (error) {
           set.status = 500;
-          return {
+          const errRes = {
             status: "Not OK",
             message: error.message
           };
+          console.log(`Response (500): ${JSON.stringify(errRes, null, 2)}`);
+          return errRes;
         }
       })
       .post('/check-status', async ({ body, set }) => {
         try {
+          console.log(`[${new Date().toISOString()}] CHECK STATUS - Request Received`);
+          console.log(`Request Body: ${JSON.stringify(body, null, 2)}`);
+
           if (!body || !body.transactionId || !body.msisdn) {
             set.status = 400;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "transactionId and msisdn are required"
             };
+            console.log(`Response (400): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           const { transactionId, msisdn } = body;
-          console.log(`[${new Date().toISOString()}] CHECK STATUS - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           const results = await db
             .select()
@@ -195,14 +225,16 @@ const app = new Elysia()
 
           if (results.length === 0) {
             set.status = 404;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "Subscription not found"
             };
+            console.log(`Response (404): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           const sub = results[0];
-          return {
+          const successRes = {
             status: "OK",
             data: {
               partnerSubscriptionId: sub.partnerSubscriptionId,
@@ -214,27 +246,35 @@ const app = new Elysia()
               updatedAt: sub.updatedAt ? new Date(sub.updatedAt).toISOString() : null,
             }
           };
+          console.log(`Response (200): ${JSON.stringify(successRes, null, 2)}`);
+          return successRes;
 
         } catch (error) {
           set.status = 500;
-          return {
+          const errRes = {
             status: "Not OK",
             message: error.message
           };
+          console.log(`Response (500): ${JSON.stringify(errRes, null, 2)}`);
+          return errRes;
         }
       })
       .post('/unsubscribe', async ({ body, set }) => {
         try {
+          console.log(`[${new Date().toISOString()}] UNSUBSCRIBE - Request Received`);
+          console.log(`Request Body: ${JSON.stringify(body, null, 2)}`);
+
           if (!body || !body.transactionId || !body.msisdn) {
             set.status = 400;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "transactionId and msisdn are required"
             };
+            console.log(`Response (400): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           const { transactionId, msisdn } = body;
-          console.log(`[${new Date().toISOString()}] UNSUBSCRIBE - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           const results = await db
             .select()
@@ -248,10 +288,12 @@ const app = new Elysia()
 
           if (results.length === 0) {
             set.status = 404;
-            return {
+            const errRes = {
               status: "Not OK",
               message: "Subscription not found"
             };
+            console.log(`Response (404): ${JSON.stringify(errRes, null, 2)}`);
+            return errRes;
           }
 
           const sub = results[0];
@@ -262,7 +304,7 @@ const app = new Elysia()
 
           setTimeout(async () => {
             try {
-              console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to UNSUBSCRIBE in database`);
+              console.log(`[${new Date().toISOString()}] CALLBACK - Updating status to UNSUBSCRIBE in database`);
               // Update status to unsubscribe in DB
               await db
                 .update(subscriptions)
@@ -276,20 +318,26 @@ const app = new Elysia()
 
               // Send callback
               if (callbackUrl) {
+                const callbackPayload = {
+                  partnerSubscriptionId: sub.partnerSubscriptionId,
+                  referenceId: sub.referenceId,
+                  msisdn: sub.msisdn,
+                  productName: sub.productName,
+                  subscriptionStatus: 'unsubscribe',
+                  timestamp: new Date().toISOString(),
+                };
                 console.log(`[${new Date().toISOString()}] CALLBACK - Sending UNSUBSCRIBE callback to ${callbackUrl}`);
+                console.log(`Callback Payload: ${JSON.stringify(callbackPayload, null, 2)}`);
+
                 await fetch(callbackUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    partnerSubscriptionId: sub.partnerSubscriptionId,
-                    referenceId: sub.referenceId,
-                    msisdn: sub.msisdn,
-                    productName: sub.productName,
-                    subscriptionStatus: 'unsubscribe',
-                    timestamp: new Date().toISOString(),
-                  }),
+                  body: JSON.stringify(callbackPayload),
                 })
-                  .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - UNSUBSCRIBE callback sent successfully`))
+                  .then(async (res) => {
+                    const text = await res.text();
+                    console.log(`[${new Date().toISOString()}] CALLBACK - UNSUBSCRIBE callback response status: ${res.status}. Body: ${text}`);
+                  })
                   .catch((err) => console.error('Callback unsubscribe error:', err.message));
               }
             } catch (err) {
@@ -297,7 +345,7 @@ const app = new Elysia()
             }
           }, delayUnsubscribe);
 
-          return {
+          const successRes = {
             status: "OK",
             message: "In Progress for unsubscription",
             data: {
@@ -305,13 +353,17 @@ const app = new Elysia()
               referenceId: sub.referenceId
             }
           };
+          console.log(`Response (200): ${JSON.stringify(successRes, null, 2)}`);
+          return successRes;
 
         } catch (error) {
           set.status = 500;
-          return {
+          const errRes = {
             status: "Not OK",
             message: error.message
           };
+          console.log(`Response (500): ${JSON.stringify(errRes, null, 2)}`);
+          return errRes;
         }
       })
   )
