@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 
-const doc = new PDFDocument({ margin: 50, bufferPages: true });
+const doc = new PDFDocument({ margins: { top: 50, bottom: 30, left: 50, right: 50 }, bufferPages: true });
 doc.pipe(fs.createWriteStream('LutpiPlix_API_Documentation.pdf'));
 
 // Colors
