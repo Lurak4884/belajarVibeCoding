@@ -45,6 +45,7 @@ const app = new Elysia()
           }
 
           const { transactionId, msisdn, productName } = body;
+          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           // Check duplicate
           const existing = await db
@@ -76,6 +77,7 @@ const app = new Elysia()
             productName: productName || null,
             subscriptionStatus: 'pending',
           });
+          console.log(`[${new Date().toISOString()}] SUBSCRIBE - Stored pending subscription. referenceId: ${referenceId}`);
 
           // Set up callback delay values
           const delayInactive = parseInt(process.env.CALLBACK_DELAY_INACTIVE || '2000', 10);
@@ -85,6 +87,7 @@ const app = new Elysia()
           // Trigger background job (callback lifecycle)
           setTimeout(async () => {
             try {
+              console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to INACTIVE for partnerSubscriptionId: ${transactionId}`);
               // Update status to inactive
               await db
                 .update(subscriptions)
@@ -93,6 +96,7 @@ const app = new Elysia()
 
               // Send callback first
               if (callbackUrl) {
+                console.log(`[${new Date().toISOString()}] CALLBACK - Sending INACTIVE callback to ${callbackUrl}`);
                 await fetch(callbackUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -104,12 +108,15 @@ const app = new Elysia()
                     subscriptionStatus: 'inactive',
                     timestamp: new Date().toISOString(),
                   }),
-                }).catch((err) => console.error('Callback inactive error:', err.message));
+                })
+                  .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - INACTIVE callback sent successfully`))
+                  .catch((err) => console.error(`[${new Date().toISOString()}] CALLBACK - INACTIVE callback failed:`, err.message));
               }
 
               // Trigger callback active after delayActive
               setTimeout(async () => {
                 try {
+                  console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to ACTIVE for partnerSubscriptionId: ${transactionId}`);
                   // Update status to active
                   await db
                     .update(subscriptions)
@@ -118,6 +125,7 @@ const app = new Elysia()
 
                   // Send callback second
                   if (callbackUrl) {
+                    console.log(`[${new Date().toISOString()}] CALLBACK - Sending ACTIVE callback to ${callbackUrl}`);
                     await fetch(callbackUrl, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -129,7 +137,9 @@ const app = new Elysia()
                         subscriptionStatus: 'active',
                         timestamp: new Date().toISOString(),
                       }),
-                    }).catch((err) => console.error('Callback active error:', err.message));
+                    })
+                      .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - ACTIVE callback sent successfully`))
+                      .catch((err) => console.error(`[${new Date().toISOString()}] CALLBACK - ACTIVE callback failed:`, err.message));
                   }
                 } catch (err) {
                   console.error('Error during active callback status update:', err.message);
@@ -171,6 +181,7 @@ const app = new Elysia()
           }
 
           const { transactionId, msisdn } = body;
+          console.log(`[${new Date().toISOString()}] CHECK STATUS - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           const results = await db
             .select()
@@ -223,6 +234,7 @@ const app = new Elysia()
           }
 
           const { transactionId, msisdn } = body;
+          console.log(`[${new Date().toISOString()}] UNSUBSCRIBE - Request received. transactionId: ${transactionId}, msisdn: ${msisdn}`);
 
           const results = await db
             .select()
@@ -250,6 +262,7 @@ const app = new Elysia()
 
           setTimeout(async () => {
             try {
+              console.log(`[${new Date().toISOString()}] CALLBACK - Setting status to UNSUBSCRIBE in database`);
               // Update status to unsubscribe in DB
               await db
                 .update(subscriptions)
@@ -263,6 +276,7 @@ const app = new Elysia()
 
               // Send callback
               if (callbackUrl) {
+                console.log(`[${new Date().toISOString()}] CALLBACK - Sending UNSUBSCRIBE callback to ${callbackUrl}`);
                 await fetch(callbackUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -274,7 +288,9 @@ const app = new Elysia()
                     subscriptionStatus: 'unsubscribe',
                     timestamp: new Date().toISOString(),
                   }),
-                }).catch((err) => console.error('Callback unsubscribe error:', err.message));
+                })
+                  .then(() => console.log(`[${new Date().toISOString()}] CALLBACK - UNSUBSCRIBE callback sent successfully`))
+                  .catch((err) => console.error('Callback unsubscribe error:', err.message));
               }
             } catch (err) {
               console.error('Error during unsubscribe callback status update:', err.message);
