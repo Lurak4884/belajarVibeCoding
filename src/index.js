@@ -101,7 +101,7 @@ const app = new Elysia()
               // Update status to inactive
               await db
                 .update(subscriptions)
-                .set({ subscriptionStatus: 'inactive', updatedAt: new Date().toISOString() })
+                .set({ subscriptionStatus: 'inactive', updatedAt: new Date() })
                 .where(eq(subscriptions.partnerSubscriptionId, transactionId));
 
               // Send callback first
@@ -136,7 +136,7 @@ const app = new Elysia()
                   // Update status to active
                   await db
                     .update(subscriptions)
-                    .set({ subscriptionStatus: 'active', updatedAt: new Date().toISOString() })
+                    .set({ subscriptionStatus: 'active', updatedAt: new Date() })
                     .where(eq(subscriptions.partnerSubscriptionId, transactionId));
 
                   // Send callback second
@@ -308,7 +308,7 @@ const app = new Elysia()
               // Update status to unsubscribe in DB
               await db
                 .update(subscriptions)
-                .set({ subscriptionStatus: 'unsubscribe', updatedAt: new Date().toISOString() })
+                .set({ subscriptionStatus: 'unsubscribe', updatedAt: new Date() })
                 .where(
                   and(
                     eq(subscriptions.partnerSubscriptionId, transactionId),
