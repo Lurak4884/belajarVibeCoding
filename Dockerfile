@@ -9,8 +9,8 @@ RUN bun install --frozen-lockfile
 # Copy source code dan env
 COPY . .
 
-# Expose port (Hugging Face Spaces default is 7860)
-EXPOSE 7860
+# Expose port (Google Cloud Run default is 8080)
+EXPOSE 8080
 
 # Jalankan server
 CMD ["bun", "run", "start"]
