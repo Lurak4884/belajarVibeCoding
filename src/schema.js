@@ -1,12 +1,13 @@
-import { mysqlTable, serial, varchar, mysqlEnum, timestamp } from 'drizzle-orm/mysql-core';
+import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sql } from 'drizzle-orm';
 
-export const subscriptions = mysqlTable('subscriptions', {
-  id: serial('id').primaryKey(),
-  partnerSubscriptionId: varchar('partner_subscription_id', { length: 100 }).notNull().unique(),
-  referenceId: varchar('reference_id', { length: 36 }).notNull(),
-  msisdn: varchar('msisdn', { length: 20 }).notNull().unique(),
-  productName: varchar('product_name', { length: 100 }),
-  subscriptionStatus: mysqlEnum('subscription_status', ['pending', 'inactive', 'active', 'unsubscribe']).default('pending').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+export const subscriptions = sqliteTable('subscriptions', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  partnerSubscriptionId: text('partner_subscription_id').notNull().unique(),
+  referenceId: text('reference_id').notNull(),
+  msisdn: text('msisdn').notNull().unique(),
+  productName: text('product_name'),
+  subscriptionStatus: text('subscription_status', { enum: ['pending', 'inactive', 'active', 'unsubscribe'] }).default('pending').notNull(),
+  createdAt: text('created_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text('updated_at').default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });

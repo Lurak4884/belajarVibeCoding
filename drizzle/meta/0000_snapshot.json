@@ -1,7 +1,7 @@
 {
-  "version": "5",
-  "dialect": "mysql",
-  "id": "7e91b116-399b-4dd0-901e-9b186413746e",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "af53a297-4e6b-422c-975f-a4c35f1931dd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "subscriptions": {
@@ -9,42 +9,42 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "serial",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "partner_subscription_id": {
           "name": "partner_subscription_id",
-          "type": "varchar(100)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "reference_id": {
           "name": "reference_id",
-          "type": "varchar(36)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "msisdn": {
           "name": "msisdn",
-          "type": "varchar(20)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "product_name": {
           "name": "product_name",
-          "type": "varchar(100)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "subscription_status": {
           "name": "subscription_status",
-          "type": "enum('pending','inactive','active','unsubscribe')",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -52,57 +52,51 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "timestamp",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(now())"
+          "default": "(CURRENT_TIMESTAMP)"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "timestamp",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "onUpdate": true,
-          "default": "(now())"
+          "default": "(CURRENT_TIMESTAMP)"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "subscriptions_id": {
-          "name": "subscriptions_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
+      "indexes": {
         "subscriptions_partner_subscription_id_unique": {
           "name": "subscriptions_partner_subscription_id_unique",
           "columns": [
             "partner_subscription_id"
-          ]
+          ],
+          "isUnique": true
         },
         "subscriptions_msisdn_unique": {
           "name": "subscriptions_msisdn_unique",
           "columns": [
             "msisdn"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "checkConstraint": {}
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "views": {},
+  "enums": {},
   "_meta": {
     "schemas": {},
     "tables": {},
     "columns": {}
   },
   "internal": {
-    "tables": {},
     "indexes": {}
   }
 }
