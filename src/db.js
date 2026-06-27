@@ -1,21 +1,17 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './schema.js';
 
-const sqlite = new Database('sqlite.db');
+// Get DATABASE_URL from environment
+const connectionString = process.env.DATABASE_URL;
 
-// Ensure table exists (especially useful for fresh cloud deployments)
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS subscriptions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    partner_subscription_id TEXT NOT NULL UNIQUE,
-    reference_id TEXT NOT NULL,
-    msisdn TEXT NOT NULL UNIQUE,
-    product_name TEXT,
-    subscription_status TEXT DEFAULT 'pending' NOT NULL,
-    created_at TEXT DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-    updated_at TEXT DEFAULT (CURRENT_TIMESTAMP) NOT NULL
-  )
-`);
+if (!connectionString) {
+  console.warn("DATABASE_URL is not set. Database operations will fail if this is running in production.");
+}
 
-export const db = drizzle(sqlite, { schema });
+// Create postgres connection client
+const client = postgres(connectionString || 'postgres://localhost:5432/mydb', {
+  prepare: false // Required for some environments like PgBouncer
+});
+
+export const db = drizzle(client, { schema });

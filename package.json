@@ -4,17 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.js",
-    "start": "bun src/index.js",
+    "start": "bun run db:push && bun src/index.js",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
     "elysia": "^1.4.29",
-    "mysql2": "^3.22.5"
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "@libsql/client": "^0.17.4",
     "drizzle-kit": "^0.31.10"
   }
 }
