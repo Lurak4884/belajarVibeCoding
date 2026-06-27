@@ -33,7 +33,7 @@ const app = new Elysia()
   .get('/', () => 'Hello World')
   .group('/api/v1/subscription', (group) =>
     group
-      .beforeHandle(checkAuth)
+      .onBeforeHandle(checkAuth)
       .post('/', async ({ body, set }) => {
         try {
           if (!body || !body.transactionId || !body.msisdn) {
