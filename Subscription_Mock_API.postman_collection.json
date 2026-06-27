@@ -1,0 +1,235 @@
+{
+	"info": {
+		"_postman_id": "849719f3-a300-4a29-9fa0-8b0242be97c8",
+		"name": "Subscription Mock API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Subscribe",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Generate dynamic values for new subscription",
+							"const timestamp = Date.now();",
+							"const randomNum = Math.floor(Math.random() * 900000) + 100000;",
+							"pm.collectionVariables.set(\"transactionId\", `TXN-${timestamp}`);",
+							"pm.collectionVariables.set(\"msisdn\", `6281234${randomNum}`);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"pm.test(\"Response status is OK\", function () {",
+							"    pm.expect(response.status).to.eql(\"OK\");",
+							"});",
+							"if (response.status === \"OK\") {",
+							"    pm.collectionVariables.set(\"active_transaction_id\", response.data.partnerSubscriptionId);",
+							"    pm.collectionVariables.set(\"active_msisdn\", pm.collectionVariables.get(\"msisdn\"));",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"transactionId\": \"{{transactionId}}\",\n    \"msisdn\": \"{{msisdn}}\",\n    \"productName\": \"Premium Package\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/subscription",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"subscription"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Check Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test(\"Response status is OK\", function () {",
+							"    pm.expect(response.status).to.eql(\"OK\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"transactionId\": \"{{active_transaction_id}}\",\n    \"msisdn\": \"{{active_msisdn}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/subscription/check-status",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"subscription",
+						"check-status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Unsubscribe",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const response = pm.response.json();",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test(\"Response status is OK\", function () {",
+							"    pm.expect(response.status).to.eql(\"OK\");",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"transactionId\": \"{{active_transaction_id}}\",\n    \"msisdn\": \"{{active_msisdn}}\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/subscription/unsubscribe",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"subscription",
+						"unsubscribe"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "{{auth_client_key}}",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "{{auth_client_id}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "auth_client_id",
+			"value": "mockClientId",
+			"type": "string"
+		},
+		{
+			"key": "auth_client_key",
+			"value": "mockClientSecret",
+			"type": "string"
+		},
+		{
+			"key": "transactionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "msisdn",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "active_transaction_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "active_msisdn",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
